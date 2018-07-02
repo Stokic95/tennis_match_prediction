@@ -1,4 +1,11 @@
 import pandas as pd
+import numpy as np
+import sys
+import numpy as np
+from sklearn import metrics, svm, model_selection
+from sklearn.svm import SVC
+from sklearn.svm import LinearSVC
+from sklearn.metrics import accuracy_score
 
 tourneys = {}
 tourney_id = 0
@@ -22,7 +29,6 @@ def load_data(_paths):
 
     _x = []
     _y = []
-
 
     for _path in _paths:
         print("Loading and preparing \"" + str(_path) + "\"")
@@ -48,6 +54,24 @@ def load_data(_paths):
     print("Data loaded and prepared.")
 
     return _x, _y
+
+
+def write_data_to_file(_matches, _results, _path):
+    file = open(_path, 'w')
+    file.write("tourney_name,surface,draw_size,tourney_level,match_num,p1_id,p1_seed,p1_entry,p1_hand,p1_ht,p1_ioc"
+            + ",p1_age,p1_rank,p1_rank_points,p2_id,p2_seed,p2_entry,p2_hand,p2_ht,p2_ioc"
+            + ",p2_age,p2_rank,p2_rank_points,best_of,round,minutes,p1_ace,p1_df,p1_svpt,p1_1stIn,p1_1stWon"
+               + ",p1_2ndWon,p1_SvGms,p1_bpSaved,p1_bpFaced,p2_ace,p2_df,p2_svpt,p2_1stIn,p2_1stWon"
+               + ",p2_2ndWon,p2_SvGms,p2_bpSaved,p2_bpFaced,result\n")
+    for i in range(0, len(_matches)):
+        for j in range(0, len(_matches[i])):
+            file.write(str(_matches[i][j]))
+            if j-1 != len(_matches[i]):
+                file.write(",")
+
+        file.write(str(_results[i]) + "\n")
+
+    file.close()
 
 
 def prepare_data(_tourney_names, _surfaces, _draw_sizes, _tourney_levels, _match_nums, _p1_ids, _p1_seeds, _p1_entries,
@@ -180,7 +204,7 @@ def prepare_data(_tourney_names, _surfaces, _draw_sizes, _tourney_levels, _match
         # p2_seed
 
         if _p2_seeds[i] != _p2_seeds[i]:
-            _match_data.append(_draw_sizes[i] // 2)
+            _match_data.append(33)
         else:
             _match_data.append(_p2_seeds[i])
 
@@ -381,27 +405,117 @@ def prepare_data(_tourney_names, _surfaces, _draw_sizes, _tourney_levels, _match
     return _matches, _results
 
 
-if __name__ == '__main__':
-    paths = [
-        "data/atp_matches_2000.csv",
-        "data/atp_matches_2001.csv",
-        "data/atp_matches_2002.csv",
-        "data/atp_matches_2003.csv",
-        "data/atp_matches_2004.csv",
-        "data/atp_matches_2005.csv",
-        "data/atp_matches_2006.csv",
-        "data/atp_matches_2007.csv",
-        "data/atp_matches_2008.csv",
-        "data/atp_matches_2009.csv",
-        "data/atp_matches_2010.csv",
-        "data/atp_matches_2011.csv",
-        "data/atp_matches_2012.csv",
-        "data/atp_matches_2013.csv",
-        "data/atp_matches_2014.csv",
-        "data/atp_matches_2015.csv",
-        "data/atp_matches_2016.csv",
-        "data/atp_matches_2017.csv",
-        "data/atp_matches_2018.csv"
-    ]
+def load_data_2(_path):
+    _data_year = pd.read_csv(_path)
+    _x_train, _y_train, _x_test, _y_test = prepare_data_2(_data_year.get("tourney_name"), _data_year.get("surface"),
+                                      _data_year.get("draw_size"),
+                                      _data_year.get("tourney_level"), _data_year.get("match_num"),
+                                      _data_year.get("p1_id"),
+                                      _data_year.get("p1_seed"), _data_year.get("p1_entry"),
+                                      _data_year.get("p1_hand"),
+                                      _data_year.get("p1_ht"), _data_year.get("p1_ioc"),
+                                      _data_year.get("p1_age"),
+                                      _data_year.get("p1_rank"), _data_year.get("p1_rank_points"),
+                                      _data_year.get("p2_id"),
+                                      _data_year.get("p2_seed"), _data_year.get("p2_entry"),
+                                      _data_year.get("p2_hand"),
+                                      _data_year.get("p2_ht"), _data_year.get("p2_ioc"),
+                                      _data_year.get("p2_age"),
+                                      _data_year.get("p2_rank"), _data_year.get("p2_rank_points"),
+                                      _data_year.get("best_of"),
+                                      _data_year.get("round"), _data_year.get("minutes"), _data_year.get("p1_ace"),
+                                      _data_year.get("p1_df"),
+                                      _data_year.get("p1_svpt"), _data_year.get("p1_1stIn"), _data_year.get("p1_1stWon"),
+                                      _data_year.get("p1_2ndWon"), _data_year.get("p1_SvGms"),
+                                      _data_year.get("p1_bpSaved"),
+                                      _data_year.get("p1_bpFaced"), _data_year.get("p2_ace"), _data_year.get("p2_df"),
+                                      _data_year.get("p2_svpt"), _data_year.get("p2_1stIn"), _data_year.get("p2_1stWon"),
+                                      _data_year.get("p2_2ndWon"), _data_year.get("p2_SvGms"),
+                                      _data_year.get("p2_bpSaved"),
+                                      _data_year.get("p2_bpFaced"), _data_year.get("result"))
 
-    x, y = load_data(paths)
+    return _x_train, _y_train, _x_test, _y_test
+
+
+def prepare_data_2(_tourney_names, _surfaces, _draw_sizes, _tourney_levels, _match_nums, _p1_ids, _p1_seeds, _p1_entries,
+               _p1_hands, _p1_hts, _p1_iocs, _p1_ages, _p1_ranks, _p1_rank_points, _p2_ids, _p2_seeds, _p2_entries,
+               _p2_hands, _p2_hts, _p2_iocs, _p2_ages, _p2_ranks, _p2_rank_points, _best_ofs, _rounds, _minutes,
+               _p1_aces, _p1_dfs, _p1_svpts, _p1_1stIns, _p1_1stWons, _p1_2ndWons, _p1_SvGms, _p1_bpSaved, _p1_bpFaced,
+               _p2_aces, _p2_dfs, _p2_svpts, _p2_1stIns, _p2_1stWons, _p2_2ndWons, _p2_SvGms, _p2_bpSaved, _p2_bpFaced,
+                   _results):
+    '''
+    # N O R M A L I Z A C I J A
+
+    norm_list = [_tourney_names, _surfaces, _draw_sizes, _tourney_levels, _match_nums, _p1_ids, _p1_seeds, _p1_entries,
+               _p1_hands, _p1_hts, _p1_iocs, _p1_ages, _p1_ranks, _p1_rank_points, _p2_ids, _p2_seeds, _p2_entries,
+               _p2_hands, _p2_hts, _p2_iocs, _p2_ages, _p2_ranks, _p2_rank_points, _best_ofs, _rounds, _minutes,
+               _p1_aces, _p1_dfs, _p1_svpts, _p1_1stIns, _p1_1stWons, _p1_2ndWons, _p1_SvGms, _p1_bpSaved, _p1_bpFaced,
+               _p2_aces, _p2_dfs, _p2_svpts, _p2_1stIns, _p2_1stWons, _p2_2ndWons, _p2_SvGms, _p2_bpSaved, _p2_bpFaced,
+                   _results]
+
+
+    s = (len(norm_list),len(norm_list[0]))
+    nova = np.zeros(s)
+
+    for i in range(0, len(norm_list)):
+        print(i)
+        maxi = max(norm_list[i])
+        mini = min(norm_list[i])
+        for j in range(0, len(norm_list[i])):
+            nova[i][j] = (norm_list[i][j] - mini)/(maxi - mini)
+
+    file = open('data/salic.csv', 'w')
+    file.write("tourney_name,surface,draw_size,tourney_level,match_num,p1_id,p1_seed,p1_entry,p1_hand,p1_ht,p1_ioc"
+               + ",p1_age,p1_rank,p1_rank_points,p2_id,p2_seed,p2_entry,p2_hand,p2_ht,p2_ioc"
+               + ",p2_age,p2_rank,p2_rank_points,best_of,round,minutes,p1_ace,p1_df,p1_svpt,p1_1stIn,p1_1stWon"
+               + ",p1_2ndWon,p1_SvGms,p1_bpSaved,p1_bpFaced,p2_ace,p2_df,p2_svpt,p2_1stIn,p2_1stWon"
+               + ",p2_2ndWon,p2_SvGms,p2_bpSaved,p2_bpFaced,result\n")
+
+    for j in range(0, len(norm_list[0])):
+        print("j: " + str(j))
+        for i in range(0, len(norm_list)):
+            if i != (len(norm_list)-1):
+                file.write(str(nova[i][j])+ ",")
+            else:
+                file.write(str(nova[i][j]))
+        file.write("\n")
+
+    file.close()
+    '''
+
+    _x_train = []
+    _y_train = []
+    _x_test = []
+    _y_test = []
+
+    for i in range(0, len(_tourney_names)):
+        _temp = [
+        _tourney_names[i], _surfaces[i], _draw_sizes[i], _tourney_levels[i], _match_nums[i], _p1_ids[i], _p1_seeds[i], _p1_entries[i],
+        _p1_hands[i], _p1_hts[i], _p1_iocs[i], _p1_ages[i], _p1_ranks[i], _p1_rank_points[i], _p2_ids[i], _p2_seeds[i], _p2_entries[i],
+        _p2_hands[i], _p2_hts[i], _p2_iocs[i], _p2_ages[i], _p2_ranks[i], _p2_rank_points[i], _best_ofs[i], _rounds[i], _minutes[i],
+        _p1_aces[i], _p1_dfs[i], _p1_svpts[i], _p1_1stIns[i], _p1_1stWons[i], _p1_2ndWons[i], _p1_SvGms[i], _p1_bpSaved[i], _p1_bpFaced[i],
+        _p2_aces[i], _p2_dfs[i], _p2_svpts[i], _p2_1stIns[i], _p2_1stWons[i], _p2_2ndWons[i], _p2_SvGms[i], _p2_bpSaved[i], _p2_bpFaced[i]]
+
+        if i % 3 == 0:
+            _x_test.append(_temp)
+            _y_test.append(_results[i])
+        else:
+            _x_train.append(_temp)
+            _y_train.append(_results[i])
+
+    return _x_train, _y_train, _x_test, _y_test
+
+
+def fit(_x, _y):
+    classification_fit = svm.SVC(kernel='rbf', gamma=0.002, coef0=0, random_state=9)
+    return classification_fit.fit(_x, _y)
+
+
+if __name__ == '__main__':
+
+    x_train, y_train, x_test, y_test = load_data_2("data/salic.csv")
+
+    cl = fit(x_train, y_train)
+
+    y_pred = cl.predict(x_test)
+    print(metrics.accuracy_score(y_test, y_pred))
